@@ -1,250 +1,59 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Bits2Qbits — 3D Two Doors</title>
-<style>
-  html, body { margin:0; padding:0; height:100%; background:#050508; overflow:hidden; }
-  #app { position:fixed; inset:0; }
-  canvas { display:block; }
-  .overlay {
-    position:fixed; left:0; right:0; bottom:0; z-index:10;
-    padding: 2rem 1.5rem 3rem; text-align:center; pointer-events:none;
-    font-family: 'Helvetica Neue', Arial, sans-serif;
-    background: linear-gradient(180deg, transparent, rgba(5,5,8,0.9) 70%);
-    opacity:0; transition: opacity 1.5s ease 2.2s;
-  }
-  .overlay.show { opacity:1; }
-  .wordmark { letter-spacing:0.45em; font-size:0.8rem; color:rgba(250,247,242,0.75); text-transform:uppercase; }
-  .title { font-size:clamp(1.4rem, 4vw, 2.2rem); color:#FAF7F2; margin:0.6rem 0 0.3rem; font-weight:700; letter-spacing:0.04em; }
-  .sub  { font-size:clamp(0.9rem, 2.4vw, 1.1rem); color:#00E5FF; }
-  .hint { color:rgba(250,247,242,0.5); font-size:0.8rem; margin-top:0.9rem; }
-</style>
-<script type="importmap">
-{
-  "imports": {
-    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
-    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
-  }
-}
-</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BITS2QBITS — Two Doors</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Cormorant+Garamond:wght@500;600&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
 </head>
 <body>
-<div id="app"></div>
-<div class="overlay" id="overlay">
-  <div class="wordmark">Bits2Qbits</div>
-  <div class="title">For Businesses</div>
-  <div class="sub">Your Fractional IT Department</div>
-  <div class="hint">Tap / scroll to explore</div>
+
+<header class="site-header">
+  <div class="wordmark">BITS2QBITS</div>
+</header>
+
+<main class="hero">
+  <section class="intro">
+    <h1 class="promise">An experienced technologist on your side of the table — handling your technology so you don't have to.</h1>
+    <p class="microcopy">Two doors. A business to run, or a home to look after. Behind each is the same thing: one human who knows technology inside out, working on your side — with every modern tool to work faster and keep your costs fair.</p>
+  </section>
+
+  <section class="doors">
+    <figure class="door-col door-business">
+      <button class="door-panel" id="door-business" data-video="assets/business_flythrough_v4.mp4" data-target="business.html" aria-label="For Businesses — enter the Business world">
+        <img src="assets/business_door_CLOSED_fronton.png" alt="For Businesses — enter the Business world" draggable="false">
+      </button>
+      <figcaption class="door-caption">
+        <h2 class="door-label label-business">For Businesses</h2>
+        <p class="door-tagline tag-business">Your Fractional IT Department.</p>
+        <p class="door-helper">All your company's technology, looked after by a senior IT professional — without hiring a full team.</p>
+      </figcaption>
+    </figure>
+
+    <figure class="door-col door-private">
+      <button class="door-panel" id="door-private" data-video="assets/private_flythrough_v2.mp4" data-target="private.html" aria-label="For Private Clients — enter the Private world">
+        <img src="assets/02_private_door_CLOSED_runes.png" alt="For Private Clients — enter the Private world" draggable="false">
+      </button>
+      <figcaption class="door-caption">
+        <h2 class="door-label label-private">For Private Clients</h2>
+        <p class="door-tagline tag-private">Your Chief Home Officer.</p>
+        <p class="door-helper">Your home's tech, privacy, and your digital life — handled discreetly.</p>
+      </figcaption>
+    </figure>
+  </section>
+</main>
+
+<div class="video-overlay" id="video-overlay" hidden>
+  <video id="overlay-video" playsinline muted preload="auto"></video>
+  <div class="overlay-controls">
+    <button id="btn-audio" class="overlay-btn" aria-label="Toggle sound">Unmute</button>
+    <button id="btn-skip" class="overlay-btn" aria-label="Close video and return to doors">Skip</button>
+  </div>
 </div>
 
-<script type="module">
-import * as THREE from 'three';
-import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
-import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
-import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
-
-const CYAN = 0x00e5ff;
-const BG   = 0x050508;
-
-const app = document.getElementById('app');
-
-const renderer = new THREE.WebGLRenderer({ antialias:true, powerPreference:'high-performance' });
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.outputColorSpace = THREE.SRGBColorSpace;
-renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.15;
-app.appendChild(renderer.domElement);
-
-const scene = new THREE.Scene();
-{ // subtle atmospheric sky gradient (not pure black)
-  const sk = document.createElement('canvas'); sk.width=2; sk.height=512;
-  const sg = sk.getContext('2d');
-  const sgrad = sg.createLinearGradient(0,0,0,512);
-  sgrad.addColorStop(0,'#0d1a26'); sgrad.addColorStop(0.55,'#070a10'); sgrad.addColorStop(1,'#050508');
-  sg.fillStyle = sgrad; sg.fillRect(0,0,2,512);
-  const skyTex = new THREE.CanvasTexture(sk); skyTex.colorSpace = THREE.SRGBColorSpace;
-  scene.background = skyTex;
-}
-scene.fog = new THREE.FogExp2(BG, 0.02);
-
-const camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 300);
-camera.position.set(0, 1.7, 9.5);
-
-scene.add(new THREE.AmbientLight(0x223344, 0.9));
-const keyLight = new THREE.PointLight(CYAN, 40, 60, 2);
-keyLight.position.set(0, 4, 4);
-scene.add(keyLight);
-
-/* ---------- grid floor ---------- */
-const grid = new THREE.GridHelper(200, 160, CYAN, 0x0a2a33);
-grid.position.y = -0.001;
-grid.material.transparent = true;
-grid.material.opacity = 0.6;
-scene.add(grid);
-
-/* ---------- window-lit skyline ---------- */
-function windowTex(rows, cols, litChance, win, base) {
-  const w = cols, h = rows;
-  const c = document.createElement('canvas'); c.width = w; c.height = h;
-  const g = c.getContext('2d');
-  g.fillStyle = base; g.fillRect(0,0,w,h);
-  for(let y=0; y<rows; y++) for(let x=0; x<cols; x++) {
-    if(Math.random() < litChance) {
-      const shade = 0.6 + Math.random()*0.4;
-      g.fillStyle = win;
-      g.globalAlpha = shade;
-      g.fillRect(x, y, 1, 1);
-      g.globalAlpha = 1;
-    }
-  }
-  const t = new THREE.CanvasTexture(c);
-  t.magFilter = THREE.NearestFilter;
-  t.colorSpace = THREE.SRGBColorSpace;
-  return t;
-}
-
-const towerGroup = new THREE.Group();
-function makeTower(x, z, w, h, d, seedLit) {
-  const tex = windowTex(Math.max(6, Math.floor(h*4)), 6, seedLit, 'rgb(0,229,255)', 'rgb(6,8,12)');
-  const mat = new THREE.MeshStandardMaterial({
-    map: tex, emissiveMap: tex,
-    emissive: new THREE.Color(CYAN), emissiveIntensity: 0.9,
-    roughness: 0.7, metalness: 0.3
-  });
-  const geo = new THREE.BoxGeometry(w, h, d);
-  const box = new THREE.Mesh(geo, mat);
-  box.position.set(x, h/2, z);
-  towerGroup.add(box);
-  // glowing edges for the wireframe silhouette
-  const e = new THREE.LineSegments(new THREE.EdgesGeometry(geo),
-    new THREE.LineBasicMaterial({ color: CYAN, transparent:true, opacity:0.5 }));
-  e.position.copy(box.position);
-  towerGroup.add(e);
-}
-
-// left + right canyon walls, dense, receding
-const canyon = [
-  // [x, z, w, h]
-  [-1.9, -2,  1.6, 6 ], [ 1.9, -2,  1.6, 5.5],
-  [-3.4, -4,  2.2, 9 ], [ 3.4, -4,  2.0, 8 ],
-  [-5.2, -7,  2.8, 13], [ 5.2, -7,  2.6, 12],
-  [-7.4,-11,  3.2, 17], [ 7.4,-11,  3.0, 16],
-  [-10, -16,  3.8, 22], [ 10, -16,  3.6, 21],
-  [-13, -22,  4.4, 28], [ 13, -22,  4.2, 27],
-  [-16.5,-29,  5.0, 36], [ 16.5,-29,  4.8, 35],
-  [-20, -38,  6.0, 46], [ 20, -38,  5.8, 45],
-];
-canyon.forEach(([x,z,w,h]) => makeTower(x, z, w, h, 3, 0.35));
-
-// mid-ground + far filler towers behind the canyon for density
-for(let i=0;i<40;i++){
-  const side = i % 2 === 0 ? -1 : 1;
-  const z = -6 - Math.random()*44;
-  const w = 1.4 + Math.random()*3.4;
-  const h = 4 + Math.random()*40;
-  const x = side * (4 + Math.random()*18);
-  makeTower(x, z, w, h, 2.5 + Math.random()*2, 0.22 + Math.random()*0.2);
-}
-scene.add(towerGroup);
-
-/* ---------- horizon glow ---------- */
-function radialTex(inner, outer) {
-  const c = document.createElement('canvas'); c.width = c.height = 256;
-  const g = c.getContext('2d');
-  const grad = g.createRadialGradient(128,128,0,128,128,128);
-  grad.addColorStop(0, inner); grad.addColorStop(0.35, outer); grad.addColorStop(1, 'rgba(0,0,0,0)');
-  g.fillStyle = grad; g.fillRect(0,0,256,256);
-  return new THREE.CanvasTexture(c);
-}
-const horizon = new THREE.Sprite(new THREE.SpriteMaterial({
-  map: radialTex('rgba(80,200,235,0.8)', 'rgba(0,55,85,0.3)'),
-  blending: THREE.AdditiveBlending, depthWrite:false, transparent:true
-}));
-horizon.position.set(0, 4, -34);
-horizon.scale.set(22, 10, 1);
-scene.add(horizon);
-
-/* ---------- the DOOR ---------- */
-const door = new THREE.Group();
-door.position.set(0, 1.75, 0.6);
-const DOOR_H = 3.4, SLAB_W = 1.25, SLAB_T = 0.28;
-
-function circuitTex(color) {
-  const c = document.createElement('canvas'); c.width = c.height = 512;
-  const x = c.getContext('2d');
-  x.clearRect(0,0,512,512);
-  x.strokeStyle = color; x.lineWidth = 6; x.shadowColor = color; x.shadowBlur = 14;
-  const traces = [
-    [70,80,440,80],[70,240,300,240],[180,80,180,400],[320,240,320,420],
-    [70,400,440,400],[440,80,440,400],[70,120,140,120],[180,340,320,340]
-  ];
-  for (const [a,b,c,d] of traces){ x.beginPath(); x.moveTo(a,b); x.lineTo(c,d); x.stroke(); }
-  x.fillStyle = color;
-  [[70,80],[180,80],[440,80],[180,240],[320,240],[70,400],[320,400],[320,340],[440,400]].forEach(p=>{ x.fillRect(p[0]-8,p[1]-8,16,16); });
-  return new THREE.CanvasTexture(c);
-}
-const slabMatLeft = new THREE.MeshStandardMaterial({
-  color: 0x15151e, roughness:0.4, metalness:0.65,
-  emissiveMap: circuitTex('#00E5FF'), emissive: new THREE.Color(CYAN), emissiveIntensity: 1.5
-});
-const slabGeo = new THREE.BoxGeometry(SLAB_W, DOOR_H, SLAB_T);
-const slabL = new THREE.Mesh(slabGeo, slabMatLeft); slabL.position.set(-SLAB_W/2, 0, 0);
-const slabR = new THREE.Mesh(slabGeo, slabMatLeft.clone()); slabR.position.set(SLAB_W/2, 0, 0);
-door.add(slabL, slabR);
-
-function frameBar(w,h,d){ return new THREE.Mesh(new THREE.BoxGeometry(w,h,d), new THREE.MeshBasicMaterial({color:CYAN})); }
-const fw = SLAB_W*2 + 0.5, fh = DOOR_H + 0.4, ft = 0.16;
-const frame = new THREE.Group();
-const top = frameBar(fw, ft, ft); top.position.set(0, fh/2, 0);
-const bot = frameBar(fw, ft, ft); bot.position.set(0, -fh/2, 0);
-const lef = frameBar(ft, fh, ft); lef.position.set(-fw/2, 0, 0);
-const rig = frameBar(ft, fh, ft); rig.position.set(fw/2, 0, 0);
-frame.add(top,bot,lef,rig);
-door.add(frame);
-scene.add(door);
-
-/* ---------- bloom ---------- */
-const composer = new EffectComposer(renderer);
-composer.addPass(new RenderPass(scene, camera));
-const bloom = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.15, 0.7, 0.05);
-composer.addPass(bloom);
-
-/* ---------- timeline ---------- */
-const SLAB_OPEN_X = 2.4;
-const camStart = new THREE.Vector3(0, 1.7, 9.5);
-const camEnd   = new THREE.Vector3(0, 2.0, -11);
-const lookStart = new THREE.Vector3(0, 1.6, -2);
-const lookEnd   = new THREE.Vector3(0, 2.4, -32);
-
-const clock = new THREE.Clock();
-let t = 0;
-function smooth(a,b,v){ const x = THREE.MathUtils.clamp((v-a)/(b-a), 0, 1); return x*x*(3-2*x); }
-
-function animate() {
-  requestAnimationFrame(animate);
-  const dt = clock.getDelta();
-  t += dt;
-  const open = smooth(0.6, 2.6, t);
-  const fly  = smooth(2.0, 6.8, t);
-  slabL.position.x = -SLAB_W/2 - open * SLAB_OPEN_X;
-  slabR.position.x =  SLAB_W/2 + open * SLAB_OPEN_X;
-  camera.position.lerpVectors(camStart, camEnd, fly);
-  camera.lookAt(new THREE.Vector3().lerpVectors(lookStart, lookEnd, fly));
-  keyLight.position.set(0, 4, 4 - fly*12);
-  composer.render();
-}
-animate();
-setTimeout(()=> document.getElementById('overlay').classList.add('show'), 5400);
-
-window.addEventListener('resize', () => {
-  camera.aspect = window.innerWidth/window.innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(window.innerWidth, window.innerHeight);
-  composer.setSize(window.innerWidth, window.innerHeight);
-});
-</script>
+<script src="assets/script.js"></script>
 </body>
 </html>
