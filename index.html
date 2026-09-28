@@ -49,7 +49,18 @@
 <div class="video-overlay" id="video-overlay" hidden>
   <video id="overlay-video" playsinline muted preload="auto"></video>
   <div class="overlay-controls">
-    <button id="btn-audio" class="overlay-btn" aria-label="Toggle sound">Unmute</button>
+    <button id="btn-audio" class="overlay-btn icon-btn" aria-label="Mute" title="Mute">
+      <svg class="ico-sound" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+        <path d="M3 9v6h4l5 5V4L7 9H3z" fill="currentColor"/>
+        <path d="M15.5 8.5a4.5 4.5 0 0 1 0 7" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+        <path d="M18 6.2a8 8 0 0 1 0 11.6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+      </svg>
+      <svg class="ico-muted" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+        <path d="M3 9v6h4l5 5V4L7 9H3z" fill="currentColor"/>
+        <line x1="16" y1="9.2" x2="22" y2="14.8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+        <line x1="22" y1="9.2" x2="16" y2="14.8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+      </svg>
+    </button>
     <button id="btn-skip" class="overlay-btn" aria-label="Close video and return to doors">Skip</button>
   </div>
 </div>
